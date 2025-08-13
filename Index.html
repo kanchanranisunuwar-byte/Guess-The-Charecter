@@ -1,0 +1,188 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guess The Characters</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --card:#111827;
+      --muted:#94a3b8;
+      --text:#e5e7eb;
+      --accent:#22c55e;
+      --warn:#ef4444;
+      --brand:#60a5fa;
+      --opt1:#3b82f6;
+      --opt2:#f97316;
+      --opt3:#8b5cf6;
+      --opt4:#14b8a6;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,Helvetica; background:radial-gradient(1200px 800px at 10% 10%,#1f2937 0%, var(--bg) 55%);
+      color:var(--text); min-height:100dvh; display:grid; place-items:center; padding:16px;
+    }
+    .app{width:100%; max-width:860px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border:1px solid rgba(255,255,255,0.08); border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    header{display:flex; align-items:center; gap:16px; padding:18px 20px;}
+    .logo{width:52px; height:52px; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,.15)}
+    .logo img{width:100%; height:100%; object-fit:cover}
+    h1{font-size:clamp(20px, 3.8vw, 34px); margin:0; letter-spacing:.3px}
+    .sub{color:var(--muted); font-size:clamp(12px, 2.1vw, 15px)}
+    .panel{padding:18px}
+    .center{display:grid; place-items:center; text-align:center}
+    .hero{max-width:560px; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,.1); box-shadow:0 12px 24px rgba(0,0,0,.35)}
+    .hero img{width:100%; height:auto; display:block}
+    .btn{cursor:pointer; border:none; border-radius:999px; padding:14px 22px; font-weight:700; letter-spacing:.3px; background:linear-gradient(180deg,#3b82f6,#2563eb); color:white; transition:transform .12s ease, box-shadow .12s ease, opacity .2s ease}
+    .btn:hover{transform:translateY(-1px); box-shadow:0 10px 18px rgba(37,99,235,.35)}
+    .btn:active{transform:translateY(0)}
+    .btn.secondary{background:linear-gradient(180deg,#334155,#1f2937)}
+    .game{display:none}
+    .game.active{display:block}
+    .quiz-wrap{display:grid; gap:16px; padding:16px}
+    .q-image{width:100%; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,.12)}
+    .q-image img{width:100%; height:auto; display:block; background:#0b1220}
+    .options{display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0,1fr))}
+    @media (max-width:560px){ .options{grid-template-columns:1fr} }
+    .option{padding:14px 16px; border-radius:14px; color:white; border:1px solid rgba(255,255,255,.12); cursor:pointer; text-align:left; font-weight:600; opacity:1; transition:opacity 0.3s ease, transform 0.2s ease, background 0.3s ease}
+    .option:nth-child(1){background:var(--opt1)}
+    .option:nth-child(2){background:var(--opt2)}
+    .option:nth-child(3){background:var(--opt3)}
+    .option:nth-child(4){background:var(--opt4)}
+    .option:hover{transform:scale(1.03)}
+    .option[disabled]{opacity:0.6; cursor:not-allowed; transform:none}
+    .option.correct{outline:2px solid var(--accent); background:var(--accent)!important; opacity:1}
+    .option.wrong{outline:2px solid var(--warn); background:var(--warn)!important; opacity:1}
+    .footer{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:8px 4px}
+    .score{color:var(--muted)}
+    .hidden{display:none}
+    .center > .btn{margin-top:16px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <header>
+        <div class="logo"><img alt="Guess The Characters" src="https://i.postimg.cc/c4N3F17k/images-1.jpg"/></div>
+        <div>
+          <h1>Guess The Characters</h1>
+          <div class="sub">Anime character guessing game — 5 questions</div>
+        </div>
+      </header>
+    </div>
+    <section id="welcome" class="card panel center">
+      <h2>Welcome</h2>
+      <div class="hero"><img alt="Welcome Image" src="https://i.postimg.cc/c4N3F17k/images-1.jpg"/></div>
+      <button id="startBtn" class="btn">Start Game</button>
+    </section>
+    <section id="game" class="card panel game">
+      <div class="quiz-wrap">
+        <div class="q-image"><img id="qImg" alt="Character"/></div>
+        <div id="qText" class="sub" style="font-size:16px">Who is this character?</div>
+        <div id="options" class="options"></div>
+        <div class="footer">
+          <div class="score" id="progress">Question 1 / 5</div>
+          <div><button id="nextBtn" class="btn secondary" disabled>Next</button></div>
+        </div>
+      </div>
+    </section>
+    <section id="result" class="card panel center hidden">
+      <h2>Your Score</h2>
+      <p id="finalScore" style="font-size:22px;"></p>
+      <button id="restartBtn" class="btn">Play Again</button>
+    </section>
+  </div><audio id="correctSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio> <audio id="wrongSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
+
+  <script>
+    const QUESTIONS = [
+      { img: 'https://i.postimg.cc/j57WhBDr/images.webp', options: ['ego jinpachi', 'naruto', 'itachi', 'issagi yochi'], answer: 'ego jinpachi' },
+      { img: 'https://i.postimg.cc/6QG5sntr/images.jpg', options: ['ego jinpachi', 'naruto', 'itachi', 'issagi yochi'], answer: 'naruto' },
+      { img: 'https://i.postimg.cc/c4N3F17k/images-1.jpg', options: ['ego jinpachi', 'naruto', 'nagi seshiro', 'issagi yochi'], answer: 'nagi seshiro' },
+      { img: 'https://i.postimg.cc/QCd2DZ12/download-1.webp', options: ['hinata', 'naruto', 'itachi', 'issagi yochi'], answer: 'hinata' },
+      { img: 'https://i.postimg.cc/DfpDGDqz/download.webp', options: ['ego jinpachi', 'naruto', 'itachi', 'issagi yochi'], answer: 'itachi' }
+    ];
+
+    QUESTIONS.forEach(q=>{ const im=new Image(); im.src=q.img; });
+
+    const welcome = document.getElementById('welcome');
+    const game = document.getElementById('game');
+    const result = document.getElementById('result');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const qImg = document.getElementById('qImg');
+    const optionsWrap = document.getElementById('options');
+    const progress = document.getElementById('progress');
+    const finalScore = document.getElementById('finalScore');
+    const correctSound = document.getElementById('correctSound');
+    const wrongSound = document.getElementById('wrongSound');
+
+    let idx = 0;
+    let score = 0;
+    let locked = false;
+
+    function show(el){ el.classList.remove('hidden'); el.classList.add('active'); }
+    function hide(el){ el.classList.add('hidden'); el.classList.remove('active'); }
+
+    function startGame(){
+      score = 0; idx = 0; locked = false;
+      hide(welcome); hide(result); show(game);
+      renderQuestion();
+    }
+
+    function renderQuestion(){
+      nextBtn.disabled = true;
+      locked = false;
+      const q = QUESTIONS[idx];
+      qImg.src = q.img;
+      qImg.alt = `Character ${idx+1}`;
+      progress.textContent = `Question ${idx+1} / ${QUESTIONS.length}`;
+      optionsWrap.innerHTML = '';
+      q.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option';
+        btn.textContent = opt;
+        btn.addEventListener('click', () => selectOption(btn, opt === q.answer));
+        optionsWrap.appendChild(btn);
+      });
+    }
+
+    function selectOption(btn, isCorrect){
+      if(locked) return;
+      locked = true;
+      if(isCorrect){
+        btn.classList.add('correct');
+        score++;
+        correctSound.currentTime = 0; correctSound.play();
+      } else {
+        btn.classList.add('wrong');
+        wrongSound.currentTime = 0; wrongSound.play();
+      }
+      [...optionsWrap.children].forEach(b=>{
+        b.disabled = true;
+        if(b.textContent === QUESTIONS[idx].answer){
+          b.classList.add('correct');
+        }
+      });
+      nextBtn.disabled = false;
+    }
+
+    function next(){
+      if(idx < QUESTIONS.length - 1){
+        idx++;
+        renderQuestion();
+      } else {
+        endGame();
+      }
+    }
+
+    function endGame(){
+      hide(game); show(result);
+      finalScore.textContent = `${score} / ${QUESTIONS.length}`;
+    }
+
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', () => { hide(result); show(welcome); });
+    nextBtn.addEventListener('click', next);
+  </script></body>
+</html>
